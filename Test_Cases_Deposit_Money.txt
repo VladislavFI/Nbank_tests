@@ -1,0 +1,94 @@
+Итерация 2: Депозит денег пользователем
+
+Тестовый пользователь:
+
+  "id": 2
+  "username": "kate199877",
+  "password": "verysTRongPassword33$",
+  "role": "USER"
+  "authorization: Basic a2F0ZTE5OTg3Nzp2ZXJ5c1RSb25nUGFzc3dvcmQzMyQ=
+
+Аккаунт пользователя:
+
+   "id": 1,
+   "accountNumber": "ACC1"
+
+Кейсы:
+
+1. Депозит денег пользователем (Позитивный)
+
+curl -X 'POST' \
+  'http://localhost:4111/api/v1/accounts/deposit' \
+  -H 'accept: */*' \
+  -H 'Authorization: Basic a2F0ZTE5OTg3Nzp2ZXJ5c1RSb25nUGFzc3dvcmQzMyQ=' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "id": 1,
+  "balance": 100
+}'
+
+Ожидаемый результат:
+- статус ответа 200 OK,
+- balance увеличился
+
+2. Депозит денег на второй аккаунт пользователя (Позитивный)
+
+curl -X 'POST' \
+  'http://localhost:4111/api/v1/accounts/deposit' \
+  -H 'accept: */*' \
+  -H 'Authorization: Basic a2F0ZTE5OTg3Nzp2ZXJ5c1RSb25nUGFzc3dvcmQzMyQ=' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "id": 2,
+  "balance": 150
+}'
+
+Ожидаемый результат:
+- статус ответа 200 OK,
+- balance увеличился
+
+3. Депозит денег на несуществующий аккаунт
+
+curl -X 'POST' \
+  'http://localhost:4111/api/v1/accounts/deposit' \
+  -H 'accept: */*' \
+  -H 'Authorization: Basic a2F0ZTE5OTg3Nzp2ZXJ5c1RSb25nUGFzc3dvcmQzMyQ=' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "id": 999,
+  "balance": 150
+}'
+
+Ожидаемый результат:
+- 403
+- Текст ошибки Unauthorized access to account
+
+
+4 Дeпозит на неверный id
+
+curl -X 'POST' \
+  'http://localhost:4111/api/v1/accounts/deposit' \
+  -H 'accept: */*' \
+  -H 'Authorization: Basic a2F0ZTE5OTg3Nzp2ZXJ5c1RSb25nUGFzc3dvcmQzMyQ=' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "id": "1",
+  "balance": 150
+
+
+
+5 Депозит с неверным balance
+
+curl -X 'POST' \
+  'http://localhost:4111/api/v1/accounts/deposit' \
+  -H 'accept: */*' \
+  -H 'Authorization: Basic a2F0ZTE5OTg3Nzp2ZXJ5c1RSb25nUGFzc3dvcmQzMyQ=' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "id": "1",
+  "balance": 0
+
+
+
+
+

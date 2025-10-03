@@ -1,0 +1,58 @@
+Итерация 2: Перевод денег с одного аккаунта на другой
+
+Тестовый пользователь 1 :
+
+  {
+  "id": 5,
+  "username": "user_1_max",
+  "password": "verysTwdawd3312312$",
+  "role": "USER",
+  "authorization" : Basic dXNlcl8xX21heDp2ZXJ5c1R3ZGF3ZDMzMTIzMTIk
+
+}
+
+Аккаунт (счет) пользователя 1
+
+{
+  "id": 5,
+  "accountNumber": "ACC5",
+  "balance": 0,
+  "transactions": []
+}
+
+
+Тестовый пользователь 2 :
+
+{
+  "id": 4,
+  "username": "user_2_nick",
+  "password": "verysTwdawd33$",
+  "role": "USER",
+  "authorization" : Basic dXNlcl8yX25pY2s6dmVyeXNUd2Rhd2QzMyQ=
+}
+
+Аккаунт (счет) пользователя 2
+
+{
+  "id": 4,
+  "accountNumber": "ACC4",
+  "balance": 0,
+  "transactions": []
+}
+
+1. Перевод денег с одного аккаунта на другой
+
+curl -X 'POST' \
+  'http://localhost:4111/api/v1/accounts/transfer' \
+  -H 'accept: */*' \
+  -H 'Authorization: Basic a2F0ZTE5OTg3Nzp2ZXJ5c1RSb25nUGFzc3dvcmQzMyQ=' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "senderAccountId": 1,
+  "receiverAccountId": 2,
+  "amount": 50
+}'
+
+
+2. Отправка на несуществующий аккаунт
+
