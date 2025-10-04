@@ -36,8 +36,17 @@ class TestChangeNameUser:
             headers=AUTH_HEADER
         )
 
+        # Запрос для проверки состояния пользователя после изменения
+        customer_profile_after_change = requests.get(
+            url=f"{BASE_URL}/customer/profile",
+            headers=AUTH_HEADER
+        )
+
         assert customer_profile.status_code == 200
         assert customer_profile.json()["customer"]["name"] == customer_name
+        assert customer_profile_after_change.json()["name"] == customer_name
+
+
 
     @pytest.mark.parametrize("customer_name", [
         "Ma",
@@ -47,6 +56,12 @@ class TestChangeNameUser:
     @pytest.mark.debug
     # Кейс: Изменение имени пользователем (Негативный)
     def test_change_name_user_negative(self, customer_name):
+        # Запрос для проверки состояния пользователя перед изменением
+        customer_profile_before_change = requests.get(
+            url=f"{BASE_URL}/customer/profile",
+            headers=AUTH_HEADER
+        )
+
         # отправляем запрос на изменение имени
         customer_profile = requests.put(
             url=f"{BASE_URL}/customer/profile",
@@ -56,5 +71,13 @@ class TestChangeNameUser:
             headers=AUTH_HEADER
         )
 
+        # Запрос для проверки состояния пользователя после изменения
+        customer_profile_after_change = requests.get(
+            url=f"{BASE_URL}/customer/profile",
+            headers=AUTH_HEADER
+        )
+
         assert customer_profile.status_code == 400
+        assert (customer_profile_before_change.json()["name"] ==
+                customer_profile_after_change.json()["name"])
 

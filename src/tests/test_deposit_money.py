@@ -19,26 +19,38 @@ class TestDepositMoney:
         )
 
         old_balance = next(acc["balance"] for acc in customer_profile.json()["accounts"]
-                                if acc["id"] == 1)
+                                if acc["id"] == 2)
 
 
         # Делаем депозит
         response = requests.post(
             url=f"{BASE_URL}/accounts/deposit",
             json={
-                "id": 1,
+                "id": 2,
                 "balance": 100
             },
             headers=AUTH_HEADER
         )
+
+        # Запрос для проверки состояния пользователя после изменения
+        customer_profile_after_change = requests.get(
+            url=f"{BASE_URL}/customer/profile",
+            headers=AUTH_HEADER
+        )
+
+        new_balance = next(acc["balance"] for acc in
+                           customer_profile_after_change.json()["accounts"] if acc["id"] == 2)
+
+
         # Проверка кода ответа
         assert response.status_code == 200
 
         # Проверка, что в ответе тот же id пользователя
-        assert response.json().get('id') == 1
+        assert response.json().get('id') == 2
 
-        #Проверка что баланс увеличился
-        assert response.json().get("balance") == old_balance + 100
+        # Проверка что баланс пользователя увеличился
+        assert new_balance == old_balance + 100
+
 
     #2. Депозит денег на второй аккаунт пользователя
     def test_deposit_second_acc_user(self):
@@ -49,26 +61,36 @@ class TestDepositMoney:
         )
 
         old_balance_acc2 = next(acc["balance"] for acc in customer_profile.json()["accounts"]
-                                if acc["id"] == 2)
+                                if acc["id"] == 7)
 
         # Делаем депозит
         response = requests.post(
             url=f"{BASE_URL}/accounts/deposit",
             json={
-                "id": 2,
+                "id": 7,
                 "balance": 150
             },
             headers=AUTH_HEADER
         )
 
+        # Запрос для проверки состояния пользователя после изменения
+        customer_profile_after_change = requests.get(
+            url=f"{BASE_URL}/customer/profile",
+            headers=AUTH_HEADER
+        )
+
+        new_balance_acc2 = next(acc["balance"] for acc in
+                           customer_profile_after_change.json()["accounts"] if acc["id"] == 7)
+
+
         # Проверка кода ответа
         assert response.status_code == 200
 
         # Проверка, что это аккаунт с id=2
-        assert response.json().get('id') == 2
+        assert response.json().get('id') == 7
 
-        # Проверка, что баланс увеличился ровно на 150
-        assert response.json().get("balance") == old_balance_acc2 + 150
+        # Проверка, что баланс пользователя увеличился
+        assert new_balance_acc2 == old_balance_acc2 + 150
 
     #3. Депозит денег на несуществующий аккаунт
     def test_deposit_non_exist_acc(self):
