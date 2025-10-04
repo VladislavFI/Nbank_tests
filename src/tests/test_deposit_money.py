@@ -141,7 +141,7 @@ class TestDepositMoney:
 
         valid_account_ids = [acc["id"] for user in list_valid_accounts.json() for acc in user["accounts"]]
 
-        assert 999 not in valid_account_ids
+        assert acc_id not in valid_account_ids
 
         # Делаем депозит c неверным id
         response = requests.post(
