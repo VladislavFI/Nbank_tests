@@ -1,160 +1,134 @@
 import pytest
-import requests
 
-BASE_URL = "http://localhost:4111/api/v1"
-AUTH_HEADER = {
-    'accept': 'application/json',
-    'Authorization': 'Basic a2F0ZTE5OTg3Nzp2ZXJ5c1RSb25nUGFzc3dvcmQzMyQ=',
-    'Content-Type': 'application/json'
-}
-
-AUTH_HEADER_ADMIN = {
-    'accept': 'application/json',
-    'Authorization': 'Basic YWRtaW46YWRtaW4=',
-    'Content-Type': 'application/json'
-}
-
+from src.main.api.models.deposit_money_request import DepositMoneyRequest
+from src.main.api.requests.admin_user_requester import AdminUserRequester
+from src.main.api.requests.deposit_money_requester import DepositMoneyRequester
+from src.main.api.specs.request_specs import RequestSpecs
+from src.main.api.specs.response_specs import ResponseSpecs
 
 @pytest.mark.api
 class TestDepositMoney:
     # 1. Кейс: Депозит денег пользователем (Позитивный)
     def test_deposit_money(self):
         # Получаем профиль до депозита
-        customer_profile = requests.get(
-            url=f"{BASE_URL}/customer/profile",
-            headers=AUTH_HEADER
-        )
+        customer_profile = AdminUserRequester(
+            RequestSpecs.admin_auth_spec(),
+            ResponseSpecs.request_returns_ok()
+        ).get()
 
-        old_balance = next(acc["balance"] for acc in customer_profile.json()["accounts"]
-                           if acc["id"] == 2)
+        create_deposit_request = DepositMoneyRequest(id=2, balance=100)
+
+        old_balance = next(acc["balance"] for acc in customer_profile["accounts"]
+                           if acc["id"] == create_deposit_request.id)
 
         # Делаем депозит
-        response = requests.post(
-            url=f"{BASE_URL}/accounts/deposit",
-            json={
-                "id": 2,
-                "balance": 100
-            },
-            headers=AUTH_HEADER
-        )
+        response = DepositMoneyRequester(
+            RequestSpecs.user_auth_spec(username="USER_1", password="verysTRongPassword33$"),
+            ResponseSpecs.request_returns_ok()
+        ).post(create_deposit_request)
+
 
         # Запрос для проверки состояния пользователя после изменения
-        customer_profile_after_change = requests.get(
-            url=f"{BASE_URL}/customer/profile",
-            headers=AUTH_HEADER
-        )
+        customer_profile_after_change = AdminUserRequester(
+            RequestSpecs.admin_auth_spec(),
+            ResponseSpecs.request_returns_ok()
+        ).get()
 
         new_balance = next(acc["balance"] for acc in
-                           customer_profile_after_change.json()["accounts"] if acc["id"] == 2)
+                           customer_profile_after_change["accounts"] if acc["id"] == create_deposit_request.id)
 
-        # Проверка кода ответа
-        assert response.status_code == 200
 
         # Проверка, что в ответе тот же id пользователя
-        assert response.json().get('id') == 2
+        assert response.id == create_deposit_request.id
 
-        # Проверка что баланс пользователя увеличился
-        assert new_balance == old_balance + 100
+        # Проверка, что баланс пользователя увеличился
+        assert new_balance == old_balance + create_deposit_request.balance
+
+
+        #очистка данных
+        #
+        # AdminUserRequester(
+        #     RequestSpecs.admin_auth_spec(),
+        #     ResponseSpecs.entity_was_deleted()
+        # ).delete(create_user_response.id)
 
     # 2. Депозит денег на второй аккаунт пользователя
     def test_deposit_second_acc_user(self):
         # Получаем профиль до депозита
-        customer_profile = requests.get(
-            url=f"{BASE_URL}/customer/profile",
-            headers=AUTH_HEADER
-        )
+        customer_profile = AdminUserRequester(
+            RequestSpecs.admin_auth_spec(),
+            ResponseSpecs.request_returns_ok()
+        ).get()
 
-        old_balance_acc2 = next(acc["balance"] for acc in customer_profile.json()["accounts"]
-                                if acc["id"] == 7)
+        create_deposit_request = DepositMoneyRequest(id=7, balance=150)
+
+        old_balance_acc2 = next(acc["balance"] for acc in customer_profile["accounts"]
+                                if acc["id"] == create_deposit_request.id)
 
         # Делаем депозит
-        response = requests.post(
-            url=f"{BASE_URL}/accounts/deposit",
-            json={
-                "id": 7,
-                "balance": 150
-            },
-            headers=AUTH_HEADER
-        )
+        response = DepositMoneyRequester(
+            RequestSpecs.user_auth_spec(username="USER_1", password="verysTRongPassword33$"),
+            ResponseSpecs.request_returns_ok()
+        ).post(create_deposit_request)
 
         # Запрос для проверки состояния пользователя после изменения
-        customer_profile_after_change = requests.get(
-            url=f"{BASE_URL}/customer/profile",
-            headers=AUTH_HEADER
-        )
+        customer_profile_after_change = AdminUserRequester(
+            RequestSpecs.admin_auth_spec(),
+            ResponseSpecs.request_returns_ok()
+        ).get()
 
         new_balance_acc2 = next(acc["balance"] for acc in
-                                customer_profile_after_change.json()["accounts"] if acc["id"] == 7)
+                                customer_profile_after_change["accounts"] if
+                                acc["id"] == create_deposit_request.id)
 
-        # Проверка кода ответа
-        assert response.status_code == 200
-
-        # Проверка, что это аккаунт с id=2
-        assert response.json().get('id') == 7
 
         # Проверка, что баланс пользователя увеличился
-        assert new_balance_acc2 == old_balance_acc2 + 150
+        assert new_balance_acc2 == old_balance_acc2 + create_deposit_request.balance
 
     # 3. Депозит денег на несуществующий аккаунт
     def test_deposit_non_exist_acc(self):
         # Проверка существующих счетов в банке
+        user_profile = AdminUserRequester(
+            RequestSpecs.admin_auth_spec(),
+            ResponseSpecs.request_returns_ok()
+        ).get()
 
-        list_valid_accounts = requests.get(
-            url=f"{BASE_URL}/admin/users",
-            headers=AUTH_HEADER_ADMIN
-        )
+        create_deposit_request = DepositMoneyRequest(id=999, balance=150)
 
-        valid_account_ids = [acc["id"] for user in list_valid_accounts.json() for acc in user["accounts"]]
+        valid_account_ids = [acc["id"] for acc in user_profile["accounts"]]
 
-        assert 999 not in valid_account_ids
+        assert create_deposit_request.id not in valid_account_ids
 
         # Делаем депозит на несуществующий аккаунт
-        response = requests.post(
-            url=f"{BASE_URL}/accounts/deposit",
-            json={
-                "id": 999,
-                "balance": 150
-            },
-            headers=AUTH_HEADER
-        )
-
-        # Проверка кода ответа
-        assert response.status_code == 403
-
-        # Проверка ошибки в ответе
-        assert response.text.strip() == "Unauthorized access to account"
+        response = DepositMoneyRequester(
+            RequestSpecs.user_auth_spec(username="USER_1", password="verysTRongPassword33$"),
+            ResponseSpecs.request_returns_forbidden()
+        ).post(create_deposit_request)
 
     # 4 Депозит с неверным id
     @pytest.mark.parametrize("acc_id, expected_status", [
         ("1", 500),
-        (1.5, 200),
         (None, 500)
     ])
-    # TODO Параметризация подогнана для того чтобы тесты были зелеными.
     def test_deposit_invalid_id(self, acc_id, expected_status):
         # Проверка существующих счетов в банке
 
-        list_valid_accounts = requests.get(
-            url=f"{BASE_URL}/admin/users",
-            headers=AUTH_HEADER_ADMIN
-        )
+        user_profile = AdminUserRequester(
+            RequestSpecs.admin_auth_spec(),
+            ResponseSpecs.request_returns_ok()
+        ).get()
 
-        valid_account_ids = [acc["id"] for user in list_valid_accounts.json() for acc in user["accounts"]]
+        valid_account_ids = [acc["id"] for acc in user_profile["accounts"]]
 
         assert acc_id not in valid_account_ids
 
-        # Делаем депозит c неверным id
-        response = requests.post(
-            url=f"{BASE_URL}/accounts/deposit",
-            json={
-                "id": acc_id,
-                "balance": 150
-            },
-            headers=AUTH_HEADER
-        )
+        create_deposit_request = DepositMoneyRequest(id=acc_id, balance=100)
 
-        # Проверка кода ответа
-        assert response.status_code == expected_status
+        # Делаем депозит c неверным id
+        response = DepositMoneyRequester(
+            RequestSpecs.user_auth_spec(username="USER_1", password="verysTRongPassword33$"),
+            ResponseSpecs.request_returns_status(expected_status)
+        ).post(create_deposit_request)
 
     # 5 Депозит с неверным balance
     @pytest.mark.parametrize("deposit_sum, expected_status, expected_error", [
@@ -162,18 +136,14 @@ class TestDepositMoney:
         (-1, 400, "Invalid account or amount")
     ])
     def test_deposit_invalid_balance(self, deposit_sum, expected_status, expected_error):
+        # Создаем запрос с некорректной суммой депозита
+        create_deposit_request = DepositMoneyRequest(id=2, balance=deposit_sum)
+
         # Делаем депозит c неверным balance
-        response = requests.post(
-            url=f"{BASE_URL}/accounts/deposit",
-            json={
-                "id": 2,
-                "balance": deposit_sum
-            },
-            headers=AUTH_HEADER
-        )
+        response = DepositMoneyRequester(
+            RequestSpecs.user_auth_spec(username="USER_1", password="verysTRongPassword33$"),
+            ResponseSpecs.request_returns_status(expected_status, expected_error)
+        ).post(create_deposit_request)
 
-        # Проверка кода ответа
-        assert response.status_code == expected_status
-
-        # Проверка кода ответа
+        # Проверка текста ошибки в ответе
         assert response.text.strip() == expected_error

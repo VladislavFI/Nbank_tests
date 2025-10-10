@@ -1,18 +1,9 @@
 import pytest
-import requests
-
-BASE_URL= "http://localhost:4111/api/v1"
-AUTH_SENDER_HEADER = {
-    'accept': 'application/json',
-    'Authorization': 'Basic dXNlcl8xX21heDp2ZXJ5c1R3ZGF3ZDMzMTIzMTIk',
-    'Content-Type': 'application/json'
-}
-
-AUTH_RECEIVER_HEADER = {
-    'accept': 'application/json',
-    'Authorization': 'Basic dXNlcl8yX25pY2s6dmVyeXNUd2Rhd2QzMyQ=',
-    'Content-Type': 'application/json'
-}
+from src.main.api.models.transfer_money_request import TransferMoneyRequest
+from src.main.api.requests.customer_profile_requester import CustomerProfileRequester
+from src.main.api.requests.transfer_money_requester import TransferMoneyRequester
+from src.main.api.specs.request_specs import RequestSpecs
+from src.main.api.specs.response_specs import ResponseSpecs
 
 
 @pytest.mark.api
@@ -20,80 +11,71 @@ class TestTransferMoney:
     # 1. Перевод денег с одного аккаунта на другой
     def test_transfer_money(self):
         # Получаем данные об отправителе до перевода
-        sender_profile = requests.get(
-            url=f"{BASE_URL}/customer/profile",
-            headers=AUTH_SENDER_HEADER
-        )
-        sender_balance_before = next(acc["balance"] for acc in sender_profile.json()["accounts"]
-                                   if acc["id"] == 5)
+        sender_profile = CustomerProfileRequester(
+            RequestSpecs.user_auth_spec("USER_1", "verysTRongPassword33$"),
+            ResponseSpecs.request_returns_ok()
+        ).get()
+
+
+        sender_transfer_request = TransferMoneyRequest(senderAccountId=5, receiverAccountId=4, amount=170)
+
+        sender_balance_before = next(acc["balance"] for acc in sender_profile["accounts"]
+                                   if acc["id"] == sender_transfer_request.senderAccountId)
 
 
         # Получаем данные о получателе до перевода
-        receiver_profile = requests.get(
-            url=f"{BASE_URL}/customer/profile",
-            headers=AUTH_RECEIVER_HEADER
-        )
-        receiver_balance_before = next(acc["balance"] for acc in receiver_profile.json()["accounts"]
-                                     if acc["id"] == 4)
+        receiver_profile = CustomerProfileRequester(
+            RequestSpecs.user_auth_spec("USER_2", "verysTRongPassword33$"),
+            ResponseSpecs.request_returns_ok()
+        ).get()
+
+        receiver_balance_before = next(acc["balance"] for acc in receiver_profile["accounts"]
+                                     if acc["id"] == sender_transfer_request.receiverAccountId)
+
 
         # Выполняем перевод
-        response = requests.post(
-            url=f"{BASE_URL}/accounts/transfer",
-            json={
-                "senderAccountId": 5,
-                "receiverAccountId": 4,
-                "amount": 170
-            },
-            headers=AUTH_SENDER_HEADER
-        )
-
-        # Проверяем код ответа
-        assert response.status_code == 200
+        response = TransferMoneyRequester(
+            RequestSpecs.user_auth_spec("USER_1", "verysTRongPassword33$"),
+            ResponseSpecs.request_returns_ok()
+        ).post(sender_transfer_request)
 
         # Проверяем, что ответ содержит информацию об обновленном аккаунте
-        response_data = response.json()
-        assert response_data.get('receiverAccountId') == 4
-        assert response_data.get('senderAccountId') == 5
-        assert response_data.get('message') == "Transfer successful"
-        assert response_data.get('amount') == 170
+        assert response.receiverAccountId == sender_transfer_request.receiverAccountId
+        assert response.senderAccountId == sender_transfer_request.senderAccountId
+        assert response.message == "Transfer successful"
+        assert response.amount == sender_transfer_request.amount
 
 
         # Получаем данные об отправителе после перевода
-        sender_profile_after = requests.get(
-            url=f"{BASE_URL}/customer/profile",
-            headers=AUTH_SENDER_HEADER
-        )
-        sender_balance_after = next(acc["balance"] for acc in sender_profile_after.json()["accounts"]
-                                  if acc["id"] == 5)
+        sender_profile_after = CustomerProfileRequester(
+            RequestSpecs.user_auth_spec("USER_1", "verysTRongPassword33$"),
+            ResponseSpecs.request_returns_ok()
+        ).get()
+
+        sender_balance_after = next(acc["balance"] for acc in sender_profile_after["accounts"]
+                                  if acc["id"] == sender_transfer_request.senderAccountId)
 
         # Получаем данные о получателе после перевода
-        receiver_profile_after = requests.get(
-            url=f"{BASE_URL}/customer/profile",
-            headers=AUTH_RECEIVER_HEADER
-        )
-        receiver_balance_after = next(acc["balance"] for acc in receiver_profile_after.json()["accounts"]
-                                    if acc["id"] == 4)
+        receiver_profile_after = CustomerProfileRequester(
+            RequestSpecs.user_auth_spec("USER_2", "verysTRongPassword33$"),
+            ResponseSpecs.request_returns_ok()
+        ).get()
+
+        receiver_balance_after = next(acc["balance"] for acc in receiver_profile_after["accounts"]
+                                    if acc["id"] == sender_transfer_request.receiverAccountId)
 
         # Проверяем, что баланс отправителя уменьшился на сумму перевода
-        assert sender_balance_after == sender_balance_before - 170
+        assert sender_balance_after == sender_balance_before - sender_transfer_request.amount
         # Проверяем, что баланс получателя увеличился на сумму перевода
-        assert receiver_balance_after == receiver_balance_before + 170
+        assert receiver_balance_after == receiver_balance_before + sender_transfer_request.amount
 
         # 2. Негативный тест: Перевод денег на несуществующий аккаунт
     def test_transfer_money_to_nonexistent_account(self):
+        transfer_request = TransferMoneyRequest(senderAccountId=5,receiverAccountId=10,amount=50)
         # Выполняем перевод на несуществующий аккаунт
-        response = requests.post(
-            url=f"{BASE_URL}/accounts/transfer",
-            json={
-                "senderAccountId": 5,
-                "receiverAccountId": 10,
-                "amount": 50
-            },
-            headers=AUTH_SENDER_HEADER
-        )
-
-        # Проверяем код ответа
-        assert response.status_code == 400
-
-        # Проверяем, что ответ содержит сообщение об ошибке
-        response_data = response.text.strip() == "Invalid transfer: insufficient funds or invalid accounts"
+        response = TransferMoneyRequester(
+            RequestSpecs.user_auth_spec("USER_1", "verysTRongPassword33$"),
+            ResponseSpecs.request_returns_bad_request("error",
+                                                      "Invalid transfer:"
+                                                      " insufficient funds or invalid accounts")
+        ).post(transfer_request)
