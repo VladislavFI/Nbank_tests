@@ -19,6 +19,13 @@ class ResponseSpecs:
         return check
 
     @staticmethod
+    def entity_was_deleted() -> Callable:
+        def check(response: Response):
+            assert response.status_code == HTTPStatus.OK, response.text
+
+        return check
+
+    @staticmethod
     def request_returns_bad_request(error_key: str = "", error_value: str = "") -> Callable:
         def check(response: Response):
             assert response.status_code == HTTPStatus.BAD_REQUEST, response.text

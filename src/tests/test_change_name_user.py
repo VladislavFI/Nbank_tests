@@ -21,6 +21,8 @@ class TestChangeNameUser:
         "_____",
         "....."
     ])
+    @pytest.mark.usefixtures("api_manager")
+    @pytest.mark.parametrize("username, password", [("USER_1", "verysTRongPassword33$")])
     # Кейс: Изменение имени пользователем
     def test_change_name_user(self, customer_name):
         customer_profile_request = ChangeNameUserRequest(name=customer_name)
@@ -47,6 +49,8 @@ class TestChangeNameUser:
         ""
     ])
     @pytest.mark.debug
+    @pytest.mark.usefixtures("api_manager")
+    @pytest.mark.parametrize("username, password", [("USER_1", "verysTRongPassword33$")])
     # Кейс: Изменение имени пользователем (Негативный)
     def test_change_name_user_negative(self, customer_name):
         # Запрос для проверки состояния пользователя перед изменением

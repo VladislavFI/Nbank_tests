@@ -14,19 +14,13 @@ class RequestSpecs:
 
     @staticmethod
     def unauth_spec():
-        return {
-            'headers': RequestSpecs.default_req_headers(),
-            'base_url': Config.get('backendUrl')
-        }
+        return RequestSpecs.default_req_headers()
 
     @staticmethod
     def admin_auth_spec():
         headers = RequestSpecs.default_req_headers()
-        headers['Authorization'] = 'Basic YWRtaW46YWRtaW4='
-        return {
-            'headers': headers,
-            'base_url': Config.get('backendUrl')
-        }
+        headers['Authorization'] = Config.get("ADMIN_AUTH_HEADER", "Bacic YWRtaW46cGFzc3dvcmQ=")
+        return headers
 
     @staticmethod
     def user_auth_spec(username: str, password: str):
@@ -39,10 +33,8 @@ class RequestSpecs:
         if response.status_code == 200:
             headers = RequestSpecs.default_req_headers()
             headers['Authorization'] = response.headers.get('Authorization')
-            return {
-                'headers': headers,
-                'base_url': Config.get('backendUrl')
-            }
+            return headers
+
         logging.error(f'Authentication failed for {username} with status {response.status_code}')
         raise Exception('Failed to authenticate user')
 
